@@ -1,0 +1,16 @@
+{
+  "name": "kahvimasiina",
+  "version": "1.0.0",
+  "description": "bot",
+  "main": "basicbot.js",
+  "scripts": {
+    "start": "node basicbot.js"
+  },
+  "author": "Tyhjakuori",
+  "license": "MIT",
+  "dependencies": {
+    "sqlite3": "^5.0.2",
+    "tmi.js": "^1.8.5",
+	"dotenv": "^10.0.0"
+  }
+}
