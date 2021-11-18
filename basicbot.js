@@ -1,10 +1,24 @@
 const tmi = require('tmi.js');
-const en = require('dotenv').config();
+const env = require('dotenv').config();
+const fetch = require('node-fetch');
 var sqlite3 = require('sqlite3').verbose();
 var db1 = new sqlite3.Database('./quotes.db');
 var db2 = new sqlite3.Database('./clips.db');
 const regexpCommand = new RegExp(/^!([a-zA-Z0-9]+)(?:\W+)?(.*)?/);
-const quoteItself = new RegExp("(.*?)");
+const re = /[^\"]([a-z0-9_,\-#. ]*)[\"$]|([a-z0-9_\-]*)[,$]|\d{4}$/gi;
+
+// TODO 
+// delete quote by id mods only
+// printtaa quote annetulla id:llä esim. !quote 4
+// JOS quote on annettu ilman argumenttejä printtaa random quote
+// Edit quote id:n perusteella mods only
+// listaa kaikki quotet !allquotes
+// Luo sivusto jolla kaikki quotet sekä komennot ovat
+// listaa kaikki komennot !allcommands
+// lisää !help komento kaikille komennoille esim. !help quote
+// Lisää quote komentoon quote, kuka sen sanoi ja milloin sanoi muotoon "Never peace out -LordSexyTrellster, Demon's Souls, 2021"
+// Lisää quote komentoon ominaisuus joka hakee nykyisen pelin mitä striimaaja pelaa, joten sen voi lisätä db inserttiin ilman manuaalista inputtia
+
 
 const client = new tmi.Client({
 	options: { debug: true, messagesLogLevel: "info" },
@@ -53,21 +67,21 @@ function onMessageHandler (target, context, msg, self) {
 	});
 	}
 
-	if (commandName === '!addquote') {
-		const [raw, command, argument1, argument2, argument3] = message.match(regexpCommand);
-		if (command) {
-			client.say(target, `Command "{command}" found with argument "${argument}"`);
-		}
-		var succ = addQuote(argument1, argument2, argument3);
-		if (succ === true) {
-		client.say(target, `${quot}`);
+	if (msg.includes("!addquote", 0)) {
+		const [raw, command, argument] = msg.match(regexpCommand);
+		var muokattu = argument.match(re);
+		client.say(target, `Found the following arguments "${argument}"`);
+		//var succ = addQuote(muokattu);
+		//if (succ === true) {
+		//client.say(target, `${quot}`);
 		console.log(`* Executed ${commandName} command`);
-		} else {
-			client.say(target, 'Something went wrong...')
-			console.log(`* Failed to execute ${commandName}`)
+		console.log(muokattu);
+		//} else {
+		//	client.say(target, 'Something went wrong...')
+		//	console.log(`* Failed to execute ${commandName}`)
 		}
-	}	
-}
+}	
+//}
 
 //ei toimi kait
 function isUserMod () {
@@ -85,68 +99,40 @@ function onConnectedHandler (addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
 }
 
-function addQuote (statement1, statement2, statement3) {
-	
-	db.run("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY DESC, quote TEXT, person TEXT, date DATE, edited DATE, previous TEXT)");
+function checkResponseStatus(res) {
+    if(res.ok){
+        return res
+    } else {
+        throw new Error(`The HTTP status of the reponse: ${res.status} (${res.statusText})`);
+    }
+}
+
+function addQuote (muokattu) {
+
+	let argsplit = muokattu[1].slice(0, -1);
+	let argPerson = muokattu[3];
+	let argYear = muokattu[5];
+	db.run("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY DESC, quote TEXT, person TEXT, game TEXT, date DATE, edited DATE, previous TEXT)");
 	let newQuote = statement1.match(quoteItself).input();
 	let mark = "-";
-	let newPerson = mark.concat(statement2);
-	if (Number.isInteger(statement3) {
+	let newPerson = mark.concat(argPerson);
+	if (Number.isInteger(argYear)) {
 		let newDate = statement3;
-	}); else {
+	} else {
 		const currentYear = new Date().getFullYear();
 		let newDate = currentYear;
 	}
-	let statement = "INSERT INTO quotes (quote, person, date) VALUES (?, ?, ?);";
+	const url = "https://api.twitch.tv/helix/channels?broadcaster_id=";
+	let channelId = process.env.CHANNEL_ID;
+	let wholeUrl = url.concat(channelId);
+	fetch(wholeUrl, {
+	method: 'GET',
+	headers: { 'Authorization': process.env.ACCESS_TOKEN, 'Client-Id': process.env.CLIENT_ID }
+	}).then(checkResponseStatus)
+		.then(res => res.json())
+		.then(json => console.log(json))
+		.catch(err => console.log(err));
+	statement = "INSERT INTO quotes (quote, person, game, date) VALUES (?, ?, ?, ?);";
 	db.run(statement, newQuote, newPerson, newDate);
 
 }
-
-function helpCommand (statement) {
-	
-	var answer = "";
-	if (statement === "quote" {
-
-	}); else if (statement === "addquote" {
-
-	}); else if (statement === "delquote" {
-
-	}); else if (statement === "editquote" {
-
-	}); else if (statement === "allquotes" {
-
-	}); else if (statement === "randomclip")
-
-	}); else if (statement === "" {
-
-	}); else {
-		answer = "Unknown help command...";
-	}
-	return answer;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
