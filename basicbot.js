@@ -71,17 +71,11 @@ function onMessageHandler (target, context, msg, self) {
 		const [raw, command, argument] = msg.match(regexpCommand);
 		var muokattu = argument.match(re);
 		client.say(target, `Found the following arguments "${argument}"`);
-		//var succ = addQuote(muokattu);
-		//if (succ === true) {
-		//client.say(target, `${quot}`);
+		var succ = addQuote(muokattu);
 		console.log(`* Executed ${commandName} command`);
 		console.log(muokattu);
-		//} else {
-		//	client.say(target, 'Something went wrong...')
-		//	console.log(`* Failed to execute ${commandName}`)
 		}
-}	
-//}
+}
 
 //ei toimi kait
 function isUserMod () {
@@ -107,32 +101,39 @@ function checkResponseStatus(res) {
     }
 }
 
+async function getCurGame() {
+	var url = "https://api.twitch.tv/helix/channels?broadcaster_id=";
+	var channelId = process.env.CHANNEL_ID;
+	var wholeUrl = url.concat(channelId);
+	const response = await fetch(wholeUrl, {
+		method: 'GET',
+		headers: { 'Authorization': process.env.ACCESS_TOKEN, 'Client-Id': process.env.CLIENT_ID }
+		}).then(checkResponseStatus)
+			.catch(err => console.log(err));
+	const data = await response.json();
+	return data;
+}
+
 function addQuote (muokattu) {
 
-	let argsplit = muokattu[1].slice(0, -1);
-	let argPerson = muokattu[3];
-	let argYear = muokattu[5];
-	db.run("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY DESC, quote TEXT, person TEXT, game TEXT, date DATE, edited DATE, previous TEXT)");
-	let newQuote = statement1.match(quoteItself).input();
-	let mark = "-";
-	let newPerson = mark.concat(argPerson);
-	if (Number.isInteger(argYear)) {
-		let newDate = statement3;
+	let newQuote = muokattu[0].slice(0, -1);
+	let newPerson = muokattu[1];
+	let newDate = muokattu[2];
+	if (newPerson.includes("-")) {
+
+	} else {
+		let mark = "-";
+		newPerson = mark.concat(newPerson);
+	}
+	if (Number.isInteger(newDate)) {
+	
 	} else {
 		const currentYear = new Date().getFullYear();
-		let newDate = currentYear;
+		newDate = currentYear;
 	}
-	const url = "https://api.twitch.tv/helix/channels?broadcaster_id=";
-	let channelId = process.env.CHANNEL_ID;
-	let wholeUrl = url.concat(channelId);
-	fetch(wholeUrl, {
-	method: 'GET',
-	headers: { 'Authorization': process.env.ACCESS_TOKEN, 'Client-Id': process.env.CLIENT_ID }
-	}).then(checkResponseStatus)
-		.then(res => res.json())
-		.then(json => console.log(json))
-		.catch(err => console.log(err));
-	statement = "INSERT INTO quotes (quote, person, game, date) VALUES (?, ?, ?, ?);";
-	db.run(statement, newQuote, newPerson, newDate);
-
+	getCurGame().then(data => {
+		var curGame = data.data[0].game_name;
+		statement = "INSERT INTO quotes (quote, person, game, date) VALUES (?, ?, ?, ?);";
+		db1.run(statement, newQuote, newPerson, curGame, newDate);
+	})
 }
