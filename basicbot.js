@@ -9,15 +9,11 @@ const re = /[^\"]([a-z0-9_,\-#. ]*)[\"$]|([a-z0-9_\-]*)[,$]|\d{4}$/gi;
 
 // TODO 
 // delete quote by id mods only
-// printtaa quote annetulla id:llä esim. !quote 4
-// JOS quote on annettu ilman argumenttejä printtaa random quote
 // Edit quote id:n perusteella mods only
 // listaa kaikki quotet !allquotes
 // Luo sivusto jolla kaikki quotet sekä komennot ovat
 // listaa kaikki komennot !allcommands
 // lisää !help komento kaikille komennoille esim. !help quote
-// Lisää quote komentoon quote, kuka sen sanoi ja milloin sanoi muotoon "Never peace out -LordSexyTrellster, Demon's Souls, 2021"
-// Lisää quote komentoon ominaisuus joka hakee nykyisen pelin mitä striimaaja pelaa, joten sen voi lisätä db inserttiin ilman manuaalista inputtia
 
 
 const client = new tmi.Client({
@@ -33,6 +29,7 @@ const client = new tmi.Client({
 	channels: [ 'channel' ]
 });
 
+db1.run("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY, quote TEXT, person TEXT, game TEXT, date DATE, edited DATE, previous TEXT)");
 client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 
@@ -56,21 +53,36 @@ function onMessageHandler (target, context, msg, self) {
 	}); 
 	}
 	
-	if (commandName === '!quote') {
-		db1.get("SELECT quote FROM quotes ORDER BY RANDOM() LIMIT 1", (err, row) => {
-		if (err) {
-			console.log(row)
+	if (msg.includes("!quote", 0)) {
+		const [raw, command, argument] = msg.match(regexpCommand);
+		var placeh = argument;
+		if (placeh === undefined) {
+			db1.get("SELECT quote, person, game, date FROM quotes ORDER BY RANDOM() LIMIT 1", (err, row) => {
+				if (err) {
+					console.log(row);
+				}
+				client.say(target, `${row.quote} ${row.person} ${row.game}, ${row.date}`);
+			})
+		} else {
+			var statement1 = "SELECT quote, person, game, date FROM quotes WHERE id = (?)"
+			db1.get(statement1, placeh, (err, row) => {
+				if (err) {
+					console.log(row);
+				}
+				client.say(target, `${row.quote} ${row.person} ${row.game}, ${row.date}`);
+			})
 		}
-		let quot = row.quote;
-		client.say(target, `${quot}`);
 		console.log(`* Executed ${commandName} command`);
-	});
 	}
 
 	if (msg.includes("!addquote", 0)) {
 		const [raw, command, argument] = msg.match(regexpCommand);
 		var muokattu = argument.match(re);
-		client.say(target, `Found the following arguments "${argument}"`);
+		// Quote format needs to be: "Quote" Who said it, Year
+		// Quote itself needs to be wrapped in quotation marks
+		// It needs to have "," after who said it because of the regex
+		// Year can be left out, but "," needs to be after the person still
+		client.say(target, `Found the following arguments "${muokattu}"`);
 		var succ = addQuote(muokattu);
 		console.log(`* Executed ${commandName} command`);
 		console.log(muokattu);
