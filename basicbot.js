@@ -145,7 +145,7 @@ function addQuote (muokattu) {
 	}
 	getCurGame().then(data => {
 		var curGame = data.data[0].game_name;
-		statement = "INSERT INTO quotes (quote, person, game, date) VALUES (?, ?, ?, ?);";
+		statement = "INSERT INTO quotes (id, quote, person, game, date) VALUES (NULL, ?, ?, ?, ?);";
 		db1.run(statement, newQuote, newPerson, curGame, newDate);
 	})
 }
