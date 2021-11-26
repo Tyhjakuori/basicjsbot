@@ -6,6 +6,7 @@ var db1 = new sqlite3.Database('./quotes.db');
 var db2 = new sqlite3.Database('./clips.db');
 const regexpCommand = new RegExp(/^!([a-zA-Z0-9]+)(?:\W+)?(.*)?/);
 const re = /[^\"]([a-z0-9_,\-#. ]*)[\"$]|([a-z0-9_\-]*)[,$]|\d{4}$/gi;
+const re2 = /([0-9]*)[ $]|([a-z]*)[,$]\s|[^\"]([a-z0-9_,\-#. ]*)[\"$]/gi;
 
 // TODO 
 // delete quote by id mods only
@@ -91,7 +92,7 @@ function onMessageHandler (target, context, msg, self) {
 	
 	if (msg.includes("!editquote", 0)) {
 		const [raw, command, argument] = msg.match(regexpCommand);
-		var editVals = argument.match(re1);
+		var editVals = argument.match(re2);
 		// Format needs to be: '!editquote Id ColumnName, "What to edit old value into"'
 		// Example: '!editquote 1 quote, "Edited text"'
 		// id: id of the entry in the database
