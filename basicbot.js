@@ -79,6 +79,7 @@ function onMessageHandler (target, context, msg, self) {
 		const [raw, command, argument] = msg.match(regexpCommand);
 		var muokattu = argument.match(re);
 		// Quote format needs to be: "Quote" Who said it, Year
+		// Example: '!addquote "Hello World" ExampleUser, 2021'
 		// Quote itself needs to be wrapped in quotation marks
 		// It needs to have "," after who said it because of the regex
 		// Year can be left out, but "," needs to be after the person still
@@ -86,7 +87,18 @@ function onMessageHandler (target, context, msg, self) {
 		var succ = addQuote(muokattu);
 		console.log(`* Executed ${commandName} command`);
 		console.log(muokattu);
-		}
+	}
+	
+	if (msg.includes("!editquote", 0)) {
+		const [raw, command, argument] = msg.match(regexpCommand);
+		var editVals = argument.match(re1);
+		// Format needs to be: '!editquote Id ColumnName, "What to edit old value into"'
+		// Example: '!editquote 1 quote, "Edited text"'
+		// id: id of the entry in the database
+		// ColumnName needs to have "," and space after it
+		var execEdit = editQuote(editVals);
+		console.log(`* Executed ${commandName} command`);
+	}
 }
 
 //ei toimi kait
@@ -148,4 +160,26 @@ function addQuote (muokattu) {
 		statement = "INSERT INTO quotes (id, quote, person, game, date) VALUES (NULL, ?, ?, ?, ?);";
 		db1.run(statement, newQuote, newPerson, curGame, newDate);
 	})
+}
+
+function editQuote(editVals) {
+
+	let editId = editVals[0];
+	let editType = editVals[1].slice(0, -2);
+	let editValue = editVals[2].slice(0, -1);
+	if (editType == "quote") {
+		var sqlstatement = "UPDATE quotes SET quote = (?) WHERE id = (?)";
+		db1.run(sqlstatement, editValue, editId);
+	} else if (editType == "person") {
+		var sqlstatement = "UPDATE quotes SET person = (?) WHERE id = (?)";
+		db1.run(sqlstatement, editValue, editId);
+	} else if (editType == "game") {
+		var sqlstatement = "UPDATE quotes SET game = (?) WHERE id = (?)";
+		db1.run(sqlstatement, editValue, editId);
+	} else if (editType == "date") {
+		var sqlstatement = "UPDATE quotes SET date = (?) WHERE id = (?)";
+		db1.run(sqlstatement, editValue, editId);
+	} else {
+		console.log("Unknown option provided");
+	}
 }
