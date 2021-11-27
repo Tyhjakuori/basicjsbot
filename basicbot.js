@@ -10,11 +10,9 @@ const re2 = /([0-9]*)[ $]|([a-z]*)[,$]\s|[^\"]([a-z0-9_,\-#. ]*)[\"$]/gi;
 
 // TODO 
 // delete quote by id mods only
-// Edit quote id:n perusteella mods only
 // listaa kaikki quotet !allquotes
 // Luo sivusto jolla kaikki quotet sekä komennot ovat
 // listaa kaikki komennot !allcommands
-// lisää !help komento kaikille komennoille esim. !help quote
 
 
 const client = new tmi.Client({
@@ -43,15 +41,15 @@ function onMessageHandler (target, context, msg, self) {
 
 	if (commandName === '!randomclip' ) {
 		db2.get("SELECT clips FROM clips ORDER BY RANDOM() LIMIT 1", (err, row) => {
-		if (err) {
-			console.log(row)
-		}
-		let urlClip = 'https://clips.twitch.tv/';
-		let dbValue = row.clips;
-		let wholeUrl = urlClip.concat(dbValue);
-		client.say(target, `${wholeUrl}`);
-		console.log(`* Executed ${commandName} command`);
-	}); 
+			if (err) {
+				console.log(row)
+			}
+			let urlClip = 'https://clips.twitch.tv/';
+			let dbValue = row.clips;
+			let wholeUrl = urlClip.concat(dbValue);
+			client.say(target, `${wholeUrl}`);
+			console.log(`* Executed ${commandName} command`);
+		}); 
 	}
 	
 	if (msg.includes("!quote", 0)) {
@@ -77,48 +75,52 @@ function onMessageHandler (target, context, msg, self) {
 	}
 
 	if (msg.includes("!addquote", 0)) {
-		const [raw, command, argument] = msg.match(regexpCommand);
-		var muokattu = argument.match(re);
-		// Quote format needs to be: "Quote" Who said it, Year
-		// Example: '!addquote "Hello World" ExampleUser, 2021'
-		// Quote itself needs to be wrapped in quotation marks
-		// It needs to have "," after who said it because of the regex
-		// Year can be left out, but "," needs to be after the person still
-		client.say(target, `Found the following arguments "${muokattu}"`);
-		var succ = addQuote(muokattu);
-		console.log(`* Executed ${commandName} command`);
-		console.log(muokattu);
+		if (context.mod == true || context.badges.broadcaster == '1') {
+			const [raw, command, argument] = msg.match(regexpCommand);
+			var muokattu = argument.match(re);
+			// quote format needs to be: "Quote" Who said it, Year
+			// Quote itself needs to be wrapped in quotation marks
+			// It needs to have "," after who said it because of the regex
+			// Year can be left out, but "," needs to be after the person still
+			client.say(target, `Found the following arguments "${muokattu}"`);
+			var succ = addQuote(muokattu);
+			console.log(`* Executed ${commandName} command`);
+		} else {
+			client.say(target, `You need to be moderator to execute this command`);
+		}
 	}
 	
 	if (msg.includes("!editquote", 0)) {
+		if (context.mod == true || context.badges.broadcaster == '1') {
+			const [raw, command, argument] = msg.match(regexpCommand);
+			var editVals = argument.match(re1);
+			// Format needs to be: '!editquote Id ColumnName, "What to edit old value into"'
+			// Example: '!editquote 1 quote, "Edited text"'
+			// id: id of the entry in the database
+			// Column needs to have "," and space after it
+			var execEdit = editQuote(editVals);
+			console.log(`* Executed ${commandName} command`);
+		} else {
+			client.say(target, `You need to be modetator to execute this command`);
+		}
+	}
+	
+	if (msg.includes("!help", 0)) {
 		const [raw, command, argument] = msg.match(regexpCommand);
-		var editVals = argument.match(re2);
-		// Format needs to be: '!editquote Id ColumnName, "What to edit old value into"'
-		// Example: '!editquote 1 quote, "Edited text"'
-		// id: id of the entry in the database
-		// ColumnName needs to have "," and space after it
-		var execEdit = editQuote(editVals);
-		console.log(`* Executed ${commandName} command`);
+		var givenArg = argument;
+		var returArg = helpCommand(givenArg);
+		client.say(target, `${returArg}`);
+		console.log(`* Executed ${commandName} command`)
 	}
 }
 
-//ei toimi kait
-function isUserMod () {
-	client.on("chat", (channel, user, message, self) => {
-		if(user.mod) {
-			// User is a mod.
-			return true;
-		} else {
-			return false;
-		}
-	})
-};
 
 function onConnectedHandler (addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
 }
 
 function checkResponseStatus(res) {
+    
     if(res.ok){
         return res
     } else {
@@ -127,6 +129,7 @@ function checkResponseStatus(res) {
 }
 
 async function getCurGame() {
+	
 	var url = "https://api.twitch.tv/helix/channels?broadcaster_id=";
 	var channelId = process.env.CHANNEL_ID;
 	var wholeUrl = url.concat(channelId);
@@ -182,5 +185,31 @@ function editQuote(editVals) {
 		db1.run(sqlstatement, editValue, editId);
 	} else {
 		console.log("Unknown option provided");
+	}
+}
+
+function helpCommand(givenArg) {
+	
+	switch (givenArg) {
+		case 'randomclip':
+			var helpMsgRC = "Prints random clip from the db. Usage: '!randomquote'";
+			return helpMsgRC;
+			break;
+		case 'quote':
+			var helpMsgQ = "Can be used with or without arguments. Argument is quotes id in the db. Usage: '!quote 20' / '!quote'";
+			return helpMsgQ;
+			break;
+		case 'addquote':
+			var helpMsgAQ = "Adds quote to the db. Format needs to be: '!addquote \"Quote\" Who said it, Year'. (Moderators only)";
+			return helpMsgAQ;
+			break;
+		case 'editquote':
+			var helpMsgEQ = "Edits existing db entry. Format needs to be: '!editquote Id ColumnName, \"What to edit old value into\"'. (Moderators only)";
+			return helpMsgEQ;
+			break;
+		default:
+			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote]. Write '!help commandName' for more info.";
+			return helpMsgH;
+			break;
 	}
 }
