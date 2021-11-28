@@ -7,9 +7,9 @@ var db2 = new sqlite3.Database('./clips.db');
 const regexpCommand = new RegExp(/^!([a-zA-Z0-9]+)(?:\W+)?(.*)?/);
 const re = /[^\"]([a-z0-9_,\-#. ]*)[\"$]|([a-z0-9_\-]*)[,$]|\d{4}$/gi;
 const re2 = /([0-9]*)[ $]|([a-z]*)[,$]\s|[^\"]([a-z0-9_,\-#. ]*)[\"$]/gi;
+const re3 = /^[0-9]+$/;
 
 // TODO 
-// delete quote by id mods only
 // listaa kaikki quotet !allquotes
 // Luo sivusto jolla kaikki quotet sekä komennot ovat
 // listaa kaikki komennot !allcommands
@@ -93,7 +93,7 @@ function onMessageHandler (target, context, msg, self) {
 	if (msg.includes("!editquote", 0)) {
 		if (context.mod == true || context.badges.broadcaster == '1') {
 			const [raw, command, argument] = msg.match(regexpCommand);
-			var editVals = argument.match(re1);
+			var editVals = argument.match(re2);
 			// Format needs to be: '!editquote Id ColumnName, "What to edit old value into"'
 			// Example: '!editquote 1 quote, "Edited text"'
 			// id: id of the entry in the database
@@ -105,6 +105,28 @@ function onMessageHandler (target, context, msg, self) {
 		}
 	}
 	
+	if (msg.includes("!delquote", 0)) {
+		if (context.mod == true || context.badges.broadcaster == '1') {
+			const [raw, command, argument] = msg.match(regexpCommand);
+			// Only provide the id of the entry you want to delete, like: '!delquote 20'
+			var numbersOnly = argument.match(re3);
+			if (numbersOnly == null) {
+				client.say(target, `Use only numbers as an argument`);
+			} else {
+				var sqlDelState = "DELETE FROM quotes WHERE id = (?)";
+				db1.run(sqlDelState, numbersOnly, (err, row) => {
+					if (err) {
+						console.log(row);
+						client.say(target, `Command failed to execute`);
+					} else {
+						client.say(target, `Successfully deleted entry, id: ${numbersOnly}`);
+					}
+				})
+				console.log(`* Executed ${commandName} command`);
+			}
+		}
+	}
+
 	if (msg.includes("!help", 0)) {
 		const [raw, command, argument] = msg.match(regexpCommand);
 		var givenArg = argument;
@@ -207,8 +229,12 @@ function helpCommand(givenArg) {
 			var helpMsgEQ = "Edits existing db entry. Format needs to be: '!editquote Id ColumnName, \"What to edit old value into\"'. (Moderators only)";
 			return helpMsgEQ;
 			break;
+		case 'delquote':
+			var helpMsgDQ = "Deletes existing db entry. Usage: '!delquote id'. (Moderators only)";
+			return helpMsgDQ;
+			break;
 		default:
-			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote]. Write '!help commandName' for more info.";
+			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote]. Write '!help commandName' for more info.";
 			return helpMsgH;
 			break;
 	}
