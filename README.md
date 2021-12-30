@@ -17,11 +17,16 @@ You can register your bot account as an app [here](https://dev.twitch.tv/)
 Twitch provides this handy guide [getting started with chat & chatbots](https://dev.twitch.tv/docs/irc)   
 Twitch [api reference](https://dev.twitch.tv/docs/api/reference)  
    
-After getting bot related OAuth, access token, client ID (username and channel id) fill those in to dotenv file and rename it to ".env"
+After getting bot related OAuth, access token, client ID (username and channel id) fill those in to dotenv file and rename it to ".env"   
+Change the channel:   
+```
+channels: [ 'myChannel' ]
+```
+To which channel(s) you want it to join after running the program.   
    
 ## Usage
    
-Run npm start to get the bot online, after that the commands can be used.
+Run npm start to get the bot online, after the bot has connected to the chat commands can be used.
    
 ## Sources
    

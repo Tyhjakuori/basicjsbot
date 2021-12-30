@@ -134,6 +134,18 @@ function onMessageHandler (target, context, msg, self) {
 		client.say(target, `${returArg}`);
 		console.log(`* Executed ${commandName} command`)
 	}
+
+	if (commandName === "!iq" ) {
+		let iqNumber = randomNum(0, 200);
+		client.say(target, `Test results are coming in.... your iq is: ${iqNumber}!`);
+		console.log(`* Executed ${commandName} command`);
+	}
+	
+	if (commandName === "!benchmax" ) {
+		let benchNumber = randomNum(0, 400);
+		client.say(target, `${context.username}'s bench max is: ${benchNumber}!`);
+		console.log(`* Executed ${commandName} command`);
+	}
 }
 
 
@@ -148,6 +160,10 @@ function checkResponseStatus(res) {
     } else {
         throw new Error(`The HTTP status of the reponse: ${res.status} (${res.statusText})`);
     }
+}
+
+function randomNum(min, max) {
+	return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 async function getCurGame() {
@@ -233,8 +249,16 @@ function helpCommand(givenArg) {
 			var helpMsgDQ = "Deletes existing db entry. Usage: '!delquote id'. (Moderators only)";
 			return helpMsgDQ;
 			break;
+		case 'iq':
+			var helpMsgIQ = "Prints random number between 0-200. Usage: '!iq'";
+			return helpMsgIQ;
+			break;
+		case 'benchmax':
+			var helpMsgBM = "Prints random number between 0-400. Usage: '!benchmax'";
+			return helpMsgBM;
+			break;
 		default:
-			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote]. Write '!help commandName' for more info.";
+			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote, iq, benchmax]. Write '!help commandName' for more info.";
 			return helpMsgH;
 			break;
 	}
