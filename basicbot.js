@@ -4,15 +4,20 @@ const fetch = require('node-fetch');
 var sqlite3 = require('sqlite3').verbose();
 var db1 = new sqlite3.Database('./quotes.db');
 var db2 = new sqlite3.Database('./clips.db');
+var db3 = new sqlite3.Database("./commands.db");
 const regexpCommand = new RegExp(/^!([a-zA-Z0-9]+)(?:\W+)?(.*)?/);
 const re = /[^\"]([a-z0-9_,\-#. ]*)[\"$]|([a-z0-9_\-]*)[,$]|\d{4}$/gi;
 const re2 = /([0-9]*)[ $]|([a-z]*)[,$]\s|[^\"]([a-z0-9_,\-#. ]*)[\"$]/gi;
 const re3 = /^[0-9]+$/;
 
 // TODO 
-// listaa kaikki quotet !allquotes
-// Luo sivusto jolla kaikki quotet sekä komennot ovat
-// listaa kaikki komennot !allcommands
+// list all quotes !allquotes provide a link to website where you can view all of them as there are too many to print in chat
+// Create a site where all commands and quotes are listed and can be accessed with !commands link
+// List all commands !allcommands
+// Add custom commands with !addcommand esim. !addcommand [commands name] [what to say] [if empty default to everyone can use this command]
+// Add quote id to !quote commands output
+// Add command to edit commands which were created with !addcommand 
+// Add command to delete commands which were created with !addcommand
 
 
 const client = new tmi.Client({
@@ -39,7 +44,7 @@ function onMessageHandler (target, context, msg, self) {
 	
 	const commandName = msg.trim();
 
-	if (commandName === '!randomclip' ) {
+	if (commandName === "!randomclip" ) {
 		db2.get("SELECT clips FROM clips ORDER BY RANDOM() LIMIT 1", (err, row) => {
 			if (err) {
 				console.log(row)
@@ -134,17 +139,14 @@ function onMessageHandler (target, context, msg, self) {
 		client.say(target, `${returArg}`);
 		console.log(`* Executed ${commandName} command`)
 	}
-
-	if (commandName === "!iq" ) {
-		let iqNumber = randomNum(0, 200);
-		client.say(target, `Test results are coming in.... your iq is: ${iqNumber}!`);
-		console.log(`* Executed ${commandName} command`);
-	}
 	
-	if (commandName === "!benchmax" ) {
-		let benchNumber = randomNum(0, 400);
-		client.say(target, `${context.username}'s bench max is: ${benchNumber}!`);
-		console.log(`* Executed ${commandName} command`);
+	if (commandName.charAt(0) === "!") {
+		commandDbQuery(msg).then((value) => {
+			commandDbSearch(value).catch(err => { console.log(err); throw err; }).then((res) => {
+				client.say(target, `${res}`);
+				console.log(`* Executed ${commandName} command`);
+			})
+		})
 	}
 }
 
@@ -162,8 +164,33 @@ function checkResponseStatus(res) {
     }
 }
 
-function randomNum(min, max) {
-	return Math.floor(Math.random() * (max - min + 1) + min);
+async function commandDbQuery(name) {
+	return new Promise(function(resolve, reject) {
+		try {
+			db3.get("SELECT * FROM command WHERE command LIKE (?)", name, function(err, row) {
+				if (err) { return reject(err); }
+				const data = row.id;
+				console.log(data);
+				resolve(data);
+			});
+		} catch (err) {
+			throw new Error(err.message);
+		}
+	});
+}
+
+async function commandDbSearch(value) {
+	return new Promise(function(resolve, reject) {
+		try {
+			db3.get("SELECT * FROM answer WHERE id = (?)", value, function(err, row) {
+				if (err) { return reject(err); }
+				const data1 = row.answer;
+				resolve(data1);
+			});
+		} catch (err) {
+			throw new Error(err.message);
+		}
+	});
 }
 
 async function getCurGame() {
@@ -249,16 +276,8 @@ function helpCommand(givenArg) {
 			var helpMsgDQ = "Deletes existing db entry. Usage: '!delquote id'. (Moderators only)";
 			return helpMsgDQ;
 			break;
-		case 'iq':
-			var helpMsgIQ = "Prints random number between 0-200. Usage: '!iq'";
-			return helpMsgIQ;
-			break;
-		case 'benchmax':
-			var helpMsgBM = "Prints random number between 0-400. Usage: '!benchmax'";
-			return helpMsgBM;
-			break;
 		default:
-			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote, iq, benchmax]. Write '!help commandName' for more info.";
+			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote]. Write '!help commandName' for more info.";
 			return helpMsgH;
 			break;
 	}
