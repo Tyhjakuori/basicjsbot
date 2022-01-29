@@ -9,16 +9,18 @@ const regexpCommand = new RegExp(/^!([a-zA-Z0-9]+)(?:\W+)?(.*)?/);
 const re = /[^\"]([a-z0-9_,\-#. ]*)[\"$]|([a-z0-9_\-]*)[,$]|\d{4}$/gi;
 const re2 = /([0-9]*)[ $]|([a-z]*)[,$]\s|[^\"]([a-z0-9_,\-#. ]*)[\"$]/gi;
 const re3 = /^[0-9]+$/;
+const re4 = /\d+|[a-z]{3}|[a-z]{3}/gi;
 
 // TODO 
 // list all quotes !allquotes provide a link to website where you can view all of them as there are too many to print in chat
 // Create a site where all commands and quotes are listed and can be accessed with !commands link
 // List all commands !allcommands
-// Add custom commands with !addcommand esim. !addcommand [commands name] [what to say] [if empty default to everyone can use this command]
+// !nowthatsabargain command that automatically writes the results into a file
+// !nowthatsabargain command that takes into consideration IF channelpoint reward "Mountain chip multipliers" and adds 2x to every bargain
+// Add more commands with !addcommand esim. !addcommand [commands name] [what to say] [if empty default to everyone can use this command]
 // Add quote id to !quote commands output
 // Add command to edit commands which were created with !addcommand 
 // Add command to delete commands which were created with !addcommand
-
 
 const client = new tmi.Client({
 	options: { debug: true, messagesLogLevel: "info" },
@@ -37,7 +39,9 @@ db1.run("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY, quote TEXT, 
 client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 
-client.connect();
+const hCommands = ["randomclip","quote","addquote","editquote","delquote","help","convert"];
+
+client.connect().catch(console.error);
 
 function onMessageHandler (target, context, msg, self) {
   if (self) { return; }
@@ -141,12 +145,61 @@ function onMessageHandler (target, context, msg, self) {
 	}
 	
 	if (commandName.charAt(0) === "!") {
-		commandDbQuery(msg).then((value) => {
-			commandDbSearch(value).catch(err => { console.log(err); throw err; }).then((res) => {
-				client.say(target, `${res}`);
+		const [raw, command, argument] = msg.match(regexpCommand);
+		if(hCommands.includes(command)) {
+
+		} else {
+			commandDbQuery(msg).catch(err => { console.log("Not found in database"); }).then((value) => {
+				commandDbSearch(value).catch(err => { console.log("Not found in database 2"); }).then((res) => {
+					if (res === undefined) {
+						console.log(`Following command not found: ${commandName}`)
+					} else {
+						client.say(target, `${res}`);
+						console.log(`* Executed ${commandName} command`);
+					}
+				})
+			})
+		}
+	}
+	
+	if (msg.includes("!convert", 0)) {
+		const [raw, command, argument] = msg.match(regexpCommand);
+		let valited = argument.match(re4);
+		// !convert 2500 usd jpy, converts $2500 to japanese yens
+		// You must use correct currency codes otherwise converted amount will be NaN
+		if (valited == null) {
+			client.say(target, `Error: use currency codes`);
+		} else {
+			fetchCur().then(data => {
+				var userInput = valited[0];
+				var convertFrom = valited[1].toUpperCase();
+				var convertTo = valited[2].toUpperCase();
+				let formatter = new Intl.NumberFormat('en-US', {
+					style: 'currency',
+					currency: `${convertTo}`
+				});
+				if (convertFrom != 'USD' || convertTo != 'USD') {
+					let fromRate = data.rates[convertFrom];
+					let toRate = data.rates[convertTo];
+					let reversed = 1 / toRate;
+					let vastaus = (userInput / fromRate) / reversed;
+					var new1 = formatter.format(vastaus);
+				} else {
+					if (convertFrom == 'USD' || convertTo == 'USD') {
+						let currencyTo = data.rates[convertTo];
+						let convertedUsd = userInput * currencyTo;
+					} else {
+						let currencyFrom = data.rates[convertFrom];
+						let toRate1 = data.rates[convertTo];
+						let reverse1 = 1 / toRate1;
+						let convertedUsd = userInput * reverse1;
+					}
+					var new1 = formatter.format(convertedUsd);
+				}
+				client.say(target, `${userInput} ${convertFrom} is ${new1} ${convertTo}`);
 				console.log(`* Executed ${commandName} command`);
 			})
-		})
+		}
 	}
 }
 
@@ -177,6 +230,17 @@ async function commandDbQuery(name) {
 			throw new Error(err.message);
 		}
 	});
+}
+
+async function fetchCur() {
+	const appId = process.env.APP_ID;
+	var fetchLatest = `https://openexchangerates.org/api/latest.json?app_id=${appId}`;
+	const response = await fetch(fetchLatest, {
+		method: 'GET'
+	}).then(checkResponseStatus)
+	.catch(err => console.log(err));
+	const data = await response.json();
+	return data;
 }
 
 async function commandDbSearch(value) {
@@ -276,8 +340,12 @@ function helpCommand(givenArg) {
 			var helpMsgDQ = "Deletes existing db entry. Usage: '!delquote id'. (Moderators only)";
 			return helpMsgDQ;
 			break;
+		case 'convert':
+			var helpMsgCVT = "Converts provided amount from provided base currency to another currency. You WILL need to use correct currency codes. Usage: '!convert [amount] [base_currency_code] [convert_to_currency_code]'. Example: '!convert 3500 usd jpy'";
+			return helpMsgCVT;
+			break;
 		default:
-			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote]. Write '!help commandName' for more info.";
+			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote, convert]. Write '!help commandName' for more info.";
 			return helpMsgH;
 			break;
 	}

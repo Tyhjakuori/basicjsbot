@@ -4,3 +4,5 @@ OAUTH_TOKEN=""
 CHANNEL_ID=""
 ACCESS_TOKEN=""
 CLIENT_ID=""
+# Use app_id only if you want to use convert command
+#APP_ID=""
