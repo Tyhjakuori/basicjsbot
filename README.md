@@ -34,6 +34,8 @@ If you want to utilize convert command, you will need to (possibly) sign up to o
 I'm using [open exchange rates](https://openexchangerates.org/) for this.   
 If you are using another service, api querys and responses might be different so you will need to figure out how to deal with that
 yourself or you can file an issue and ask for my help(no guarantees though).   
+
+If you wish to use followage & uptime commands, you will need to include your own channels id in the .env file.   
    
 ## Usage
    

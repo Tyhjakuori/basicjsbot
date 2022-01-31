@@ -39,7 +39,7 @@ db1.run("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY, quote TEXT, 
 client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 
-const hCommands = ["randomclip","quote","addquote","editquote","delquote","help","convert"];
+const hCommands = ["randomclip","quote","addquote","editquote","delquote","help","convert","uptime","followage"];
 
 client.connect().catch(console.error);
 
@@ -167,6 +167,7 @@ function onMessageHandler (target, context, msg, self) {
 		let valited = argument.match(re4);
 		// !convert 2500 usd jpy, converts $2500 to japanese yens
 		// You must use correct currency codes otherwise converted amount will be NaN
+		// Base currency using this method i used is USD
 		if (valited == null) {
 			client.say(target, `Error: use currency codes`);
 		} else {
@@ -201,6 +202,37 @@ function onMessageHandler (target, context, msg, self) {
 			})
 		}
 	}
+	
+	if (commandName === "!uptime") {
+		getUptime().catch(err => { console.log("Error while fecthing channel info: %s", err); }).then((data) =>{
+			if (data.data[0] === undefined) {
+				client.say(target, `Either the channel isn't online or error occured`);
+			} else {
+				let uptime = Date.parse(data.data[0].started_at);
+				let dateDiff = Math.abs(new Date() - uptime);
+				let readableTime = msToTime(dateDiff);
+				client.say(target, `Uptime is ${readableTime}`);
+				console.log(`* Executed ${commandName} command`);
+			}
+		})
+	}
+	
+	if (commandName === "!followage") {
+		var user = context.username;
+		getUserId(user).catch(err => { console.log("Fetching username failed"); }).then((value) => {
+			fetchFollowAge(value.data[0].id).catch(err => { console.log("Fetching follow time failed"); }).then((value1) => {
+				if (value1.data[0] === undefined) {
+					client.say(target, `Not following`);
+					console.log(`* Executed ${commandName} command`);
+				} else {
+					let followedTime = new Date(value1.data[0].followed_at);
+					let followA = followedTime.toUTCString();
+					client.say(target, `${context.username} has been following since ${followA}`);
+					console.log(`* Executed ${commandName} command`);
+				}
+			})
+		})
+	}
 }
 
 
@@ -209,12 +241,24 @@ function onConnectedHandler (addr, port) {
 }
 
 function checkResponseStatus(res) {
-    
     if(res.ok){
         return res
     } else {
         throw new Error(`The HTTP status of the reponse: ${res.status} (${res.statusText})`);
     }
+}
+
+function msToTime(duration) {
+	var milliseconds = Math.floor((duration % 1000) / 100),
+    seconds = Math.floor((duration / 1000) % 60),
+    minutes = Math.floor((duration / (1000 * 60)) % 60),
+    hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+
+  hours = (hours < 10) ? "0" + hours : hours;
+  minutes = (minutes < 10) ? "0" + minutes : minutes;
+  seconds = (seconds < 10) ? "0" + seconds : seconds;
+
+  return hours + ":" + minutes + ":" + seconds + "." + milliseconds;
 }
 
 async function commandDbQuery(name) {
@@ -258,7 +302,6 @@ async function commandDbSearch(value) {
 }
 
 async function getCurGame() {
-	
 	var url = "https://api.twitch.tv/helix/channels?broadcaster_id=";
 	var channelId = process.env.CHANNEL_ID;
 	var wholeUrl = url.concat(channelId);
@@ -271,8 +314,44 @@ async function getCurGame() {
 	return data;
 }
 
-function addQuote (muokattu) {
+async function getUptime() {
+	var url = "https://api.twitch.tv/helix/streams?user_id=";
+	var channelId = process.env.CHANNEL_ID;
+	var wholeUrl = url.concat(channelId);
+	const response = await fetch(wholeUrl, {
+		method: 'GET',
+		headers: { 'Authorization': process.env.ACCESS_TOKEN, 'Client-Id': process.env.CLIENT_ID }
+		}).then(checkResponseStatus)
+			.catch(err => console.log(err));
+	const data = await response.json();
+	return data;
+}
 
+async function fetchFollowAge(userId) {
+	var url = "https://api.twitch.tv/helix/users/follows?from_id=";
+	let channelId = process.env.CHANNEL_ID;
+	var wholeUrl = url.concat(userId + "&to_id=" + channelId);
+	const response1 = await fetch(wholeUrl, {
+		method: 'GET',
+		headers: { 'Authorization': process.env.ACCESS_TOKEN, 'Client-Id': process.env.CLIENT_ID }
+		}).then(checkResponseStatus)
+			.catch(err => console.log(err));
+	const data = await response1.json();
+	return data;
+}
+
+async function getUserId(user) {
+	var url = `https://api.twitch.tv/helix/users?login=${user}`;
+	const response2 = await fetch(url, {
+		method: 'GET',
+		headers: { 'Authorization': process.env.ACCESS_TOKEN, 'Client-Id': process.env.CLIENT_ID }
+		}).then(checkResponseStatus)
+			.catch(err => console.log(err));
+	const data = await response2.json();
+	return data;
+}
+
+function addQuote (muokattu) {
 	let newQuote = muokattu[0].slice(0, -1);
 	let newPerson = muokattu[1];
 	let newDate = muokattu[2];
@@ -296,7 +375,6 @@ function addQuote (muokattu) {
 }
 
 function editQuote(editVals) {
-
 	let editId = editVals[0];
 	let editType = editVals[1].slice(0, -2);
 	let editValue = editVals[2].slice(0, -1);
@@ -318,7 +396,6 @@ function editQuote(editVals) {
 }
 
 function helpCommand(givenArg) {
-	
 	switch (givenArg) {
 		case 'randomclip':
 			var helpMsgRC = "Prints random clip from the db. Usage: '!randomquote'";
@@ -344,8 +421,16 @@ function helpCommand(givenArg) {
 			var helpMsgCVT = "Converts provided amount from provided base currency to another currency. You WILL need to use correct currency codes. Usage: '!convert [amount] [base_currency_code] [convert_to_currency_code]'. Example: '!convert 3500 usd jpy'";
 			return helpMsgCVT;
 			break;
+		case 'uptime':
+			var helpMsgUT = "Prints channels uptime. Usage: '!uptime'";
+			return helpMsgUT;
+			break;
+		case 'followage':
+			var helpMsgFWA = "Prints the time when user followed the channel. Usage: '!followage'";
+			return helpMsgFWA;
+			break;
 		default:
-			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote, convert]. Write '!help commandName' for more info.";
+			var helpMsgH = "Currently available commands are: [randomclip, quote, addquote, editquote, delquote, convert, uptime, followage]. Write '!help commandName' for more info.";
 			return helpMsgH;
 			break;
 	}
